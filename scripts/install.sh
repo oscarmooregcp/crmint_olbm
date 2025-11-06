@@ -85,7 +85,7 @@ function parse_command_line_arguments() {
 
 # Function to clone and checkout repository
 function clone_and_checkout_repository() {
-  TARGET_REPO_URL="https://github.com/bqml-for-ga4/crmint.git"
+  TARGET_REPO_URL="https://github.com/bqml-for-ga4/crmint_olbm.git"
   TARGET_REPO_NAME="crmint"
   CLONE_DIR="$HOME/$TARGET_REPO_NAME"
 
@@ -110,31 +110,31 @@ function clone_and_checkout_repository() {
   fi
 }
 
-# Function to install the command line using Python 3.9
+# Function to install the command line using Python 3.10
 function install_command_line() {
   # Remove existing virtual environment if it exists
   if [ -d .venv ]; then
     rm -rf .venv
   fi
 
-  # Install Python 3.9 and its venv module
-  echo "Installing Python 3.9 and necessary packages..."
+  # Install Python 3.10 and its venv module
+  echo "Installing Python 3.10 and necessary packages..."
   sudo apt-get update
   sudo apt-get install -y software-properties-common
   sudo add-apt-repository ppa:deadsnakes/ppa -y &> /dev/null
   sudo apt-get update -qq
-  sudo apt-get install -y -qq python3.9 python3.9-venv python3.9-dev
+  sudo apt-get install -y -qq python3.10 python3.10-venv python3.10-dev
 
-  # Verify Python 3.9 installation
-  if ! command -v python3.9 &> /dev/null; then
-    echo "Python 3.9 installation failed, exiting."
+  # Verify Python 3.10 installation
+  if ! command -v python3.10 &> /dev/null; then
+    echo "Python 3.10 installation failed, exiting."
     exit 1
   fi
-  echo "Python 3.9 version: $(python3.9 --version)"
+  echo "Python 3.10 version: $(python3.10 --version)"
 
-  # Create virtual environment using Python 3.9
-  echo "Creating virtual environment with Python 3.9..."
-  python3.9 -m venv .venv
+  # Create virtual environment using Python 3.10
+  echo "Creating virtual environment with Python 3.10..."
+  python3.10 -m venv .venv
 
   # Activate the virtual environment
   echo "Activating virtual environment..."
