@@ -86,7 +86,7 @@ function parse_command_line_arguments() {
 # Function to clone and checkout repository
 function clone_and_checkout_repository() {
   TARGET_REPO_URL="https://github.com/bqml-for-ga4/crmint_olbm.git"
-  TARGET_REPO_NAME="crmint"
+  TARGET_REPO_NAME="crmint_olbm"
   CLONE_DIR="$HOME/$TARGET_REPO_NAME"
 
   if [ -d "$CLONE_DIR" ]; then
