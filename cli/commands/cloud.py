@@ -1094,10 +1094,9 @@ def _stop_cloud_sql_proxy(_, debug=False):
 def _install_python_packages(stage, debug=False):
   cmds = [
       (' [ ! -d ".venv_controller" ] &&'
-       ' python3 -m venv .venv_controller &&'
-       ' . .venv_controller/bin/activate &&'
-       ' pip install --upgrade pip wheel'),
-      (' . .venv_controller/bin/activate &&'
+       ' python3 -m venv .venv_controller; '
+       ' . .venv_controller/bin/activate && '
+       ' pip install --upgrade pip wheel && '
        ' pip install -r requirements-controller.txt')
   ]
   cmd_workdir = os.path.join(stage.workdir, 'backend')
