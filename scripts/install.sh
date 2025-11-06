@@ -160,7 +160,7 @@ function add_wrapper_function_to_bashrc() {
 # accessible from all directories
 function crmint {
   CURRENT_DIR=\$(pwd)
-  cd \$HOME/crmint
+  cd \$HOME/crmint_olbm
   . .venv/bin/activate
   command crmint \$@ || return
   deactivate
