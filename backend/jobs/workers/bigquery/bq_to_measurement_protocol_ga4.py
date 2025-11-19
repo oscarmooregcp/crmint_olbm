@@ -140,13 +140,27 @@ class BQToMeasurementProtocolProcessorGA4(bq_worker.BQWorker):
           'https://docs.python.org/3/library/string.html#template-strings.')
 
     # TODO(dulacp): Migrate to jinja2 templates, will help for batches
-    # TODO(dulacp): Implement batches to optimize the overall upload duration.
+    # (oscarmore) batch process added
+    # loops through template and adds to events_batch. once batch_size validates it is full, it sends a single payload and events_batch is cleared
+    batch_size = self._params.get('mp_batch_size', 20)
     num_rows = page.num_items
     template = string.Template(self._params['template'])
+    events_batch = []
     for idx, row in enumerate(page):
-      payload = template.substitute(dict(row.items()))
-      self._send_payload(json.loads(payload), url_param)
-      if idx % (math.ceil(num_rows / 10)) == 0:
+      event = json.loads(template.substitute(dict(row.items())))
+      events_batch.extend(event.get('events', [event]))
+
+      if len(events_batch) >= batch_size or (idx + 1) == num_rows:
+        payload = {
+            'client_id': event.get('client_id'),
+            'app_instance_id': event.get('app_instance_id'),
+            'user_id': event.get('user_id'),
+            'events': events_batch,
+        }
+        self._send_payload(payload, url_param)
+        events_batch = []
+
+      if idx > 0 and idx % (math.ceil(num_rows / 10)) == 0:
         progress = idx / num_rows
         self.log_info(f'Completed {progress:.2%} of the measurement '
                       f'protocol hits')
