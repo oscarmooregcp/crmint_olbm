@@ -244,9 +244,13 @@ class BQToMeasurementProtocolProcessorGA4(bq_worker.BQWorker):
         dataset.table(self._params['bq_table_id']),
         page_token=self._params.get('bq_page_token', None),
         page_size=self._params['bq_batch_size'])
-    url_param = ga_utils.get_url_param_by_id(self._params['measurement_id'])
+
+    if self._params['debug']:
+      base_url = 'https://www.google-analytics.com/debug/mp/collect'
+    else:
+      base_url = 'https://www.google-analytics.com/mp/collect'
     # We are only interested in the first page results, since our chunk is
     # fully specicifed by (page_token, batch_size). The next page will be
     # processed by another processing instance.
     first_page = next(row_iterator.pages)
-    self._stream_rows(first_page, url_param)
+    self._stream_rows(first_page, base_url)
