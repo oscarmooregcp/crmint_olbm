@@ -72,26 +72,6 @@ class BQToMeasurementProtocolGA4(bq_worker.BQWorker):
   # Maximum number of jobs to enqueued before spawning a new scheduler.
   MAX_ENQUEUED_JOBS = 100
 
-  def _get_batch_url(self, url: str) -> str:
-    """
-    Safely transforms a standard GA4 collect URL into a batch URL
-    without breaking query parameters (api_secret, measurement_id).
-    """
-    parsed = urlparse(url)
-
-    # Only append /batch if it's not already there
-    if not parsed.path.endswith('/batch'):
-        # Check if we are hitting the standard collect endpoint
-        if parsed.path.endswith('/collect'):
-             # Replaces .../collect with .../collect/batch
-             new_path = f"{parsed.path}/batch"
-
-             # Reconstruct the URL with the new path but keeping params intact
-             parsed = parsed._replace(path=new_path)
-             return urlunparse(parsed)
-
-    return url
-
   def _execute(self) -> None:
     client = self._get_client()
     bq_project_id = self._params['bq_project_id']
@@ -154,6 +134,27 @@ class BQToMeasurementProtocolProcessorGA4(bq_worker.BQWorker):
         raise worker.WorkerException(f'Failed to send event with status code '
                                      f'({response.status_code}) and '
                                      f'parameters: {payload}')
+
+  def _get_batch_url(self, url: str) -> str:
+    """
+    Safely transforms a standard GA4 collect URL into a batch URL
+    without breaking query parameters (api_secret, measurement_id).
+    """
+    parsed = urlparse(url)
+
+    # Only append /batch if it's not already there
+    if not parsed.path.endswith('/batch'):
+        # Check if we are hitting the standard collect endpoint
+        if parsed.path.endswith('/collect'):
+             # Replaces .../collect with .../collect/batch
+             new_path = f"{parsed.path}/batch"
+
+             # Reconstruct the URL with the new path but keeping params intact
+             parsed = parsed._replace(path=new_path)
+             return urlunparse(parsed)
+
+    return url
+
 
 
 
