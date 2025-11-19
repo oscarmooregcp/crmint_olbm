@@ -111,18 +111,13 @@ class BQToMeasurementProtocolProcessorGA4(bq_worker.BQWorker):
   `bq_batch_size`. This worker will read this given chunk and stream its
   content to the Measurement Protocol API for GA4 Properties.
   """
-
-  def _send_payload(self, payload, url_param) -> None:
-    if self._params['debug']:
-      domain = 'https://www.google-analytics.com/debug/mp/collect'
-    else:
-      domain = 'https://www.google-analytics.com/mp/collect'
-
+# Sends payload to Batch endpoint
+  def _send_payload(self, payload, url: str) -> None:
     querystring = urllib.parse.urlencode({
-        url_param: self._params['measurement_id'],
+        'measurement_id': self._params['measurement_id'],
         'api_secret': self._params['api_secret'],
     })
-    response = requests.post(f'{domain}?{querystring}',
+    response = requests.post(f'{url}?{querystring}',
                              data=json.dumps(payload),
                              headers={'content-type': 'application/json'})
     if self._params['debug']:
