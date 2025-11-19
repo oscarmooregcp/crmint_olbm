@@ -31,6 +31,7 @@ from jobs.workers import worker
 from jobs.workers.bigquery import bq_worker
 from jobs.workers.ga import ga_utils
 
+from urllib.parse import urlparse, urlunparse
 
 class BQToMeasurementProtocolGA4(bq_worker.BQWorker):
   """Reads a BigQuery table of arbitraty size and schedule processing tasks.
@@ -60,13 +61,36 @@ class BQToMeasurementProtocolGA4(bq_worker.BQWorker):
       ('mp_batch_size', 'number', True, 20, ('Measurement Protocol '
                                              'batch size')),
       ('debug', 'boolean', True, False, 'Debug mode'),
+
   ]
+
+
 
   # BigQuery batch size for querying results.
   BQ_BATCH_SIZE = 2000
 
   # Maximum number of jobs to enqueued before spawning a new scheduler.
   MAX_ENQUEUED_JOBS = 100
+
+  def _get_batch_url(self, url: str) -> str:
+    """
+    Safely transforms a standard GA4 collect URL into a batch URL
+    without breaking query parameters (api_secret, measurement_id).
+    """
+    parsed = urlparse(url)
+
+    # Only append /batch if it's not already there
+    if not parsed.path.endswith('/batch'):
+        # Check if we are hitting the standard collect endpoint
+        if parsed.path.endswith('/collect'):
+             # Replaces .../collect with .../collect/batch
+             new_path = f"{parsed.path}/batch"
+
+             # Reconstruct the URL with the new path but keeping params intact
+             parsed = parsed._replace(path=new_path)
+             return urlunparse(parsed)
+
+    return url
 
   def _execute(self) -> None:
     client = self._get_client()
@@ -131,6 +155,9 @@ class BQToMeasurementProtocolProcessorGA4(bq_worker.BQWorker):
                                      f'({response.status_code}) and '
                                      f'parameters: {payload}')
 
+
+
+
   def _stream_rows(self, page: page_iterator.Page, url_param: str) -> None:
     # Warns users if they are using an unsupported formatting syntax.
     if '%(' in self._params['template']:
@@ -139,32 +166,79 @@ class BQToMeasurementProtocolProcessorGA4(bq_worker.BQWorker):
           'please update to the Template Strings syntax: '
           'https://docs.python.org/3/library/string.html#template-strings.')
 
-    # TODO(dulacp): Migrate to jinja2 templates, will help for batches
-    # (oscarmore) batch process added
-    # loops through template and adds to events_batch. once batch_size validates it is full, it sends a single payload and events_batch is cleared
-    batch_size = self._params.get('mp_batch_size', 20)
+
+    # If the user provided the standard URL, we switch it to batch mode here.
+    batch_url = self._get_batch_url(url_param)
+
+
+
+    # GA4 Measurement Protocol /batch limit is strictly 25
+    batch_size = self._params.get('mp_batch_size', 25)
     num_rows = page.num_items
     template = string.Template(self._params['template'])
-    events_batch = []
+
+    # List to hold the array of request bodies
+    batch_payloads = []
+
+    # Keys that belong to the Request Body, NOT the Event Parameters
+    # We filter these out so they don't accidentally appear inside 'events[].params'
+    protocol_keys = {
+        'client_id', 'user_id', 'app_instance_id',
+        'timestamp_micros', 'non_personalized_ads', 'events'
+    }
+
     for idx, row in enumerate(page):
-      event = json.loads(template.substitute(dict(row.items())))
-      events_batch.extend(event.get('events', [event]))
+      try:
+        # render the JSON for this specific row
+        row_data = json.loads(template.substitute(dict(row.items())))
+      except json.decoder.JSONDecodeError as e:
+        self.log_warn(f"Skipping row {idx} due to JSON error: {e}")
+        continue
 
-      if len(events_batch) >= batch_size or (idx + 1) == num_rows:
-        payload = {
-            'client_id': event.get('client_id'),
-            'app_instance_id': event.get('app_instance_id'),
-            'user_id': event.get('user_id'),
-            'events': events_batch,
-        }
-        self._send_payload(payload, url_param)
-        events_batch = []
+      # LOGIC CHECK 1: Determine if 'events' is already structured in the template
+      # or if we need to construct it from flat row data.
+      if 'events' in row_data:
+        event_list = row_data['events']
+      else:
+        # If no 'events' array exists, treat the remaining data as the event parameters.
+        # We assume the template output is flat: {"client_id": "...", "name": "...", ...}
+        # We exclude protocol keys to prevent sending 'client_id' inside the event params.
+        single_event = {k: v for k, v in row_data.items() if k not in protocol_keys}
+        event_list = [single_event]
 
+      # LOGIC CHECK 2: Construct the Request Body (User context)
+      request_body = {
+          'client_id': row_data.get('client_id'),
+          'app_instance_id': row_data.get('app_instance_id'),
+          'user_id': row_data.get('user_id'),
+          'timestamp_micros': row_data.get('timestamp_micros'),
+          'non_personalized_ads': row_data.get('non_personalized_ads'),
+          'events': event_list,
+      }
+
+      # Remove keys with None values to keep payload clean/minimal
+      request_body = {k: v for k, v in request_body.items() if v is not None}
+
+      # Ensure mandatory ID is present (GA4 requires client_id OR app_instance_id)
+      if 'client_id' not in request_body and 'app_instance_id' not in request_body:
+         self.log_warn(f"Row {idx} missing mandatory 'client_id' or 'app_instance_id'. Skipping.")
+         continue
+
+      batch_payloads.append(request_body)
+
+      # Send condition: Batch full OR Last item
+      if len(batch_payloads) >= batch_size or (idx + 1) == num_rows:
+        if batch_payloads: # Ensure list is not empty
+            self._send_payload(batch_payloads, batch_url)
+            batch_payloads = [] # Reset for next batch
+
+      # Logging progress
       if idx > 0 and idx % (math.ceil(num_rows / 10)) == 0:
         progress = idx / num_rows
-        self.log_info(f'Completed {progress:.2%} of the measurement '
-                      f'protocol hits')
+        self.log_info(f'Completed {progress:.2%} of the measurement protocol hits')
+
     self.log_info('Done with measurement protocol hits.')
+
 
   def _execute(self) -> None:
     client = self._get_client()
