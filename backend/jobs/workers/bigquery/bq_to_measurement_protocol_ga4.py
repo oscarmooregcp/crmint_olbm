@@ -135,26 +135,6 @@ class BQToMeasurementProtocolProcessorGA4(bq_worker.BQWorker):
                                      f'({response.status_code}) and '
                                      f'parameters: {payload}')
 
-  def _get_batch_url(self, url: str) -> str:
-    """
-    Safely transforms a standard GA4 collect URL into a batch URL
-    without breaking query parameters (api_secret, measurement_id).
-    """
-    parsed = urlparse(url)
-
-    # Only append /batch if it's not already there
-    if not parsed.path.endswith('/batch'):
-        # Check if we are hitting the standard collect endpoint
-        if parsed.path.endswith('/collect'):
-             # Replaces .../collect with .../collect/batch
-             new_path = f"{parsed.path}/batch"
-
-             # Reconstruct the URL with the new path but keeping params intact
-             parsed = parsed._replace(path=new_path)
-             return urlunparse(parsed)
-
-    return url
-
 
 
 
@@ -239,6 +219,26 @@ class BQToMeasurementProtocolProcessorGA4(bq_worker.BQWorker):
         self.log_info(f'Completed {progress:.2%} of the measurement protocol hits')
 
     self.log_info('Done with measurement protocol hits.')
+
+  def _get_batch_url(self, url: str) -> str:
+    """
+    Safely transforms a standard GA4 collect URL into a batch URL
+    without breaking query parameters (api_secret, measurement_id).
+    """
+    parsed = urlparse(url)
+
+    # Only append /batch if it's not already there
+    if not parsed.path.endswith('/batch'):
+        # Check if we are hitting the standard collect endpoint
+        if parsed.path.endswith('/collect'):
+             # Replaces .../collect with .../collect/batch
+             new_path = f"{parsed.path}/batch"
+
+             # Reconstruct the URL with the new path but keeping params intact
+             parsed = parsed._replace(path=new_path)
+             return urlunparse(parsed)
+
+    return url
 
 
   def _execute(self) -> None:
