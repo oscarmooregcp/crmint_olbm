@@ -120,15 +120,16 @@ class BQToMeasurementProtocolProcessorGA4(bq_worker.BQWorker):
     response = requests.post(f'{url}?{querystring}',
                              data=json.dumps(payload),
                              headers={'content-type': 'application/json'})
-    if self._params['debug']:
+    # A successful non-debug call returns 204, a debug call returns 200.
+    # Any other status code is an error.
+    if response.status_code == requests.codes.ok and self._params['debug']:
       for msg in response.json()['validationMessages']:
         self.log_warn(f'Validation Message: {msg["description"]}, '
                       f'Payload: {payload}')
-    else:
-      if response.status_code != requests.codes.no_content:
-        raise worker.WorkerException(f'Failed to send event with status code '
-                                     f'({response.status_code}) and '
-                                     f'parameters: {payload}')
+    elif response.status_code != requests.codes.no_content:
+      raise worker.WorkerException(f'Failed to send event. Status: '
+                                   f'{response.status_code}, '
+                                   f'Response: {response.text}')
 
 
 
