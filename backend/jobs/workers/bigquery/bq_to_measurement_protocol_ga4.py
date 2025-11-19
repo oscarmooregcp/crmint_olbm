@@ -63,10 +63,10 @@ class BQToMeasurementProtocolGA4(bq_worker.BQWorker):
   ]
 
   # BigQuery batch size for querying results.
-  BQ_BATCH_SIZE = 1000
+  BQ_BATCH_SIZE = 500
 
   # Maximum number of jobs to enqueued before spawning a new scheduler.
-  MAX_ENQUEUED_JOBS = 50
+  MAX_ENQUEUED_JOBS = 20
 
   def _execute(self) -> None:
     client = self._get_client()
