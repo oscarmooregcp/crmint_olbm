@@ -63,10 +63,10 @@ class BQToMeasurementProtocolGA4(bq_worker.BQWorker):
   ]
 
   # BigQuery batch size for querying results.
-  BQ_BATCH_SIZE = 25
+  BQ_BATCH_SIZE = 20000
 
   # Maximum number of jobs to enqueued before spawning a new scheduler.
-  MAX_ENQUEUED_JOBS = 10000
+  MAX_ENQUEUED_JOBS = 50
 
   def _execute(self) -> None:
     client = self._get_client()
@@ -146,10 +146,13 @@ class BQToMeasurementProtocolProcessorGA4(bq_worker.BQWorker):
     for idx, row in enumerate(page):
       payload = template.substitute(dict(row.items()))
       self._send_payload(json.loads(payload), url_param)
+
       if idx % (math.ceil(num_rows / 10)) == 0:
         progress = idx / num_rows
         self.log_info(f'Completed {progress:.2%} of the measurement '
                       f'protocol hits')
+        self.log_info('+--Pages:', pages)
+        self.log_info('+--Number of Rows:', num_rows)
     self.log_info('Done with measurement protocol hits.')
 
   def _execute(self) -> None:
