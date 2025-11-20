@@ -28,12 +28,12 @@ def setup_pubsub():  # pylint: disable=too-many-locals
       },
       'crmint-task-finished': {
           'push_endpoint': 'http://controller:8080/push/task-finished',
-          'ack_deadline_seconds': 60,
+          'ack_deadline_seconds': 600,
           'minimum_backoff': 10,  # seconds
       },
       'crmint-start-pipeline': {
           'push_endpoint': 'http://controller:8080/push/start-pipeline',
-          'ack_deadline_seconds': 60,
+          'ack_deadline_seconds': 600,
           'minimum_backoff': 10,  # seconds
       },
       'crmint-pipeline-finished': None,
