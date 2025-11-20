@@ -151,7 +151,6 @@ class BQToMeasurementProtocolProcessorGA4(bq_worker.BQWorker):
         progress = idx / num_rows
         self.log_info(f'Completed {progress:.2%} of the measurement '
                       f'protocol hits')
-        self.log_info('+--Number of Rows:', num_rows)
     self.log_info('Done with measurement protocol hits.')
 
   def _execute(self) -> None:
