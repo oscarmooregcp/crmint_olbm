@@ -135,19 +135,13 @@ class BQToMeasurementProtocolProcessorGA4(bq_worker.BQWorker):
 
 
 
-  def _stream_rows(self, page: page_iterator.Page, url_param: str) -> None:
+  def _stream_rows(self, page: page_iterator.Page, batch_url: str) -> None:
     # Warns users if they are using an unsupported formatting syntax.
     if '%(' in self._params['template']:
       self.log_warn(
           'It seems you are using an unsupported formatting syntax, '
           'please update to the Template Strings syntax: '
           'https://docs.python.org/3/library/string.html#template-strings.')
-
-
-    # If the user provided the standard URL, we switch it to batch mode here.
-    batch_url = self._get_batch_url(url_param)
-
-
 
     # GA4 Measurement Protocol /batch limit is strictly 25
     batch_size = self._params.get('mp_batch_size', 25)
@@ -216,26 +210,6 @@ class BQToMeasurementProtocolProcessorGA4(bq_worker.BQWorker):
 
     self.log_info('Done with measurement protocol hits.')
 
-  def _get_batch_url(self, url: str) -> str:
-    """
-    Safely transforms a standard GA4 collect URL into a batch URL
-    without breaking query parameters (api_secret, measurement_id).
-    """
-    parsed = urlparse(url)
-
-    # Only append /batch if it's not already there
-    if not parsed.path.endswith('/batch'):
-        # Check if we are hitting the standard collect endpoint
-        if parsed.path.endswith('/collect'):
-             # Replaces .../collect with .../collect/batch
-             new_path = f"{parsed.path}/batch"
-
-             # Reconstruct the URL with the new path but keeping params intact
-             parsed = parsed._replace(path=new_path)
-             return urlunparse(parsed)
-
-    return url
-
 
   def _execute(self) -> None:
     client = self._get_client()
@@ -247,9 +221,9 @@ class BQToMeasurementProtocolProcessorGA4(bq_worker.BQWorker):
         page_size=self._params['bq_batch_size'])
 
     if self._params['debug']:
-      base_url = 'https://www.google-analytics.com/debug/mp/collect'
+      base_url = 'https://www.google-analytics.com/debug/mp/batch'
     else:
-      base_url = 'https://www.google-analytics.com/mp/collect'
+      base_url = 'https://www.google-analytics.com/mp/batch'
     # We are only interested in the first page results, since our chunk is
     # fully specicifed by (page_token, batch_size). The next page will be
     # processed by another processing instance.
