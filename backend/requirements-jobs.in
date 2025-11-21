@@ -1,7 +1,12 @@
--r common/requirements.in
 google-analytics-admin
 google-api-python-client
 google-cloud-aiplatform
 google-cloud-bigquery
 google-cloud-storage
 wheel==0.45.0
+flask-cors==3.0.10
+flask-migrate==3.1.0
+flask-sqlalchemy==2.5.1
+mysql-connector-python==8.0.28
+sqlalchemy==1.4.40
+appengine-python-standard==1.0.0

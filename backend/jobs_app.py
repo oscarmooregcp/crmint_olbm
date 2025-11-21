@@ -34,6 +34,13 @@ from jobs.workers import worker
 app = Flask(__name__)
 auth_filter.add(app)
 
+# Database configuration
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv(
+    'DATABASE_URI',
+    'mysql+mysqlconnector://crmint:crmint@db:3306/crmint_development')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+extensions.db.init_app(app)
+
 
 @app.route('/api/workers', methods=['GET'])
 def workers_list():
