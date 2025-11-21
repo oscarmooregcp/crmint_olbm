@@ -16,11 +16,12 @@ import signal
 import sys
 import traceback
 import types
+import os
 
-from flask import json
-from flask.app import Flask
-from flask.globals import request
+# Consolidated Flask imports
+from flask import Flask, request, jsonify 
 
+# Local application imports
 from common import auth_filter
 from common import crmint_logging
 from common import message
