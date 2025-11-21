@@ -26,6 +26,8 @@ from common import crmint_logging
 from common import message
 from common import result
 from common import task
+from controller import extensions
+from controller.models import TaskEnqueued
 from jobs.workers import finder
 from jobs.workers import worker
 
@@ -55,6 +57,22 @@ def start_task():
   except (message.BadRequestError, message.TooEarlyError) as e:
     return e.message, e.code
 
+  # Check for the task in enqueued_tasks at the beginning.
+  enqueued_task = (
+      TaskEnqueued.query.filter(TaskEnqueued.task_name == task_inst.name)
+      .one_or_none()
+  )
+
+  if enqueued_task is None:
+    crmint_logging.log_message(
+        f"Task {task_inst.name} not found in enqueued_tasks at start; "
+        "treating as already completed / duplicate message",
+        log_level='INFO',
+        worker_class=task_inst.worker_class,
+        pipeline_id=task_inst.pipeline_id,
+        job_id=task_inst.job_id)
+    return 'OK', 200 # Exit normally (2xx) and DO NOT perform GA4 work
+
   crmint_logging.log_message(
       f'Starting task for name: {task_inst.name}',
       log_level='DEBUG',
@@ -77,11 +95,42 @@ def start_task():
         worker_class=task_inst.worker_class,
         pipeline_id=task_inst.pipeline_id,
         job_id=task_inst.job_id)
+
+    # After successful BigQuery + GA4 work: delete the row.
+    rows_deleted = (
+        TaskEnqueued.query
+        .filter(TaskEnqueued.task_name == task_inst.name)
+        .delete(synchronize_session=False)
+    )
+    extensions.db.session.commit()
+
+    if rows_deleted == 0:
+      crmint_logging.log_message(
+          f"Task {task_inst.name} completion: enqueued_tasks row already deleted; "
+          "assuming another worker finalized it",
+          log_level='INFO',
+          worker_class=task_inst.worker_class,
+          pipeline_id=task_inst.pipeline_id,
+          job_id=task_inst.job_id)
+    else:
+      crmint_logging.log_message(
+          f"Task {task_inst.name} successfully processed and removed from enqueued_tasks",
+          log_level='INFO',
+          worker_class=task_inst.worker_class,
+          pipeline_id=task_inst.pipeline_id,
+          job_id=task_inst.job_id)
+
+    result_inst = result.Result(
+        task_inst.name, task_inst.job_id, True, workers_to_enqueue)
+    result_inst.report()
+    return 'OK', 200
+
   except worker.WorkerException as e:
     class_name = e.__class__.__name__
     worker_inst.log_error(f'Execution failed: {class_name}: {e}')
     result_inst = result.Result(task_inst.name, task_inst.job_id, False)
     result_inst.report()
+    return 'ERROR', 500 # Return 500 for genuine failures
   except Exception as e:  # pylint: disable=broad-except
     formatted_exception = traceback.format_exc()
     worker_inst.log_error(f'Unexpected error {formatted_exception}')
@@ -91,11 +140,7 @@ def start_task():
       worker_inst.log_error(f'Giving up after {task_inst.attempts} attempt(s)')
       result_inst = result.Result(task_inst.name, task_inst.job_id, False)
       result_inst.report()
-  else:
-    result_inst = result.Result(
-        task_inst.name, task_inst.job_id, True, workers_to_enqueue)
-    result_inst.report()
-  return 'OK', 200
+    return 'ERROR', 500 # Return 500 for genuine failures
 
 
 def shutdown_handler(sig: int, frame: types.FrameType) -> None:

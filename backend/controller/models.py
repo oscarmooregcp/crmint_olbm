@@ -749,54 +749,6 @@ class Job(extensions.db.Model):
     Returns:
       Number of tasks still running for this given job.
     """
-    crmint_logging.log_message(
-        f'Finished task for name: {task_name}',
-        log_level='DEBUG',
-        worker_class=self.worker_class,
-        pipeline_id=self.pipeline_id,
-        job_id=self.id)
-    # Handles tasks that are not registered which should be considered an error.
-    found_tasks = self._get_tasks_with_name(task_name)
-    if not found_tasks:
-      crmint_logging.log_message(
-        f'Unregistered task for name: {task_name}. '
-        f'Setting jobs/pipeline to idle.',
-        log_level='WARNING',
-        worker_class=self.worker_class,
-        pipeline_id=self.pipeline_id,
-        job_id=self.id)
-      # Clear the enqueued tasks queue for this namespace
-      TaskEnqueued.delete_tasks_like_namespace(self.pipeline_id)
-      # Set the job to idle
-      self.set_status(Job.STATUS.IDLE)
-      crmint_logging.log_message(
-        f'Job {self.id} has been set to IDLE.',
-        log_level='INFO',
-        worker_class=self.worker_class,
-        pipeline_id=self.pipeline_id,
-        job_id=self.id)
-      # Set all jobs in the pipeline to idle
-      for job in self.pipeline.jobs:
-        job.set_status(Job.STATUS.IDLE)
-        crmint_logging.log_message(
-          f'Job {job.id} in pipeline has been set to IDLE.',
-          log_level='INFO',
-          worker_class=self.worker_class,
-          pipeline_id=self.pipeline_id,
-          job_id=job.id)
-      # Set the pipeline to idle
-      self.pipeline.set_status(Pipeline.STATUS.IDLE)
-      crmint_logging.log_message(
-        f'Pipeline {self.pipeline_id} has been set to IDLE.',
-        log_level='INFO',
-        worker_class=self.worker_class,
-        pipeline_id=self.pipeline_id,
-        job_id=self.id)
-      return 0
-
-    # Deletes matched tasks
-    for task_inst in found_tasks:
-      task_inst.delete()
     num_running_tasks = self._enqueued_task_count()
     crmint_logging.log_message(
         f'Running tasks: {num_running_tasks}',
