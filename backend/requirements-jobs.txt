@@ -18,6 +18,12 @@ croniter==2.0.1
     # via -r /app/backend/common/requirements.in
 flask==2.0.3
     # via -r /app/backend/common/requirements.in
+flask-cors==3.0.10
+    # via -r backend/requirements-jobs.in
+flask-migrate==3.1.0
+    # via -r backend/requirements-jobs.in
+flask-sqlalchemy==2.5.1
+    # via -r backend/requirements-jobs.in
 google-analytics-admin==0.10.1
     # via -r backend/requirements-jobs.in
 google-api-core[grpc]==2.10.0
@@ -113,6 +119,8 @@ markupsafe==2.1.1
     # via jinja2
 msgpack==1.0.4
     # via cachecontrol
+mysql-connector-python==8.0.28
+    # via -r backend/requirements-jobs.in
 packaging==21.3
     # via
     #   google-cloud-aiplatform
@@ -170,6 +178,8 @@ six==1.16.0
     #   google-auth-httplib2
     #   grpcio
     #   python-dateutil
+sqlalchemy==1.4.40
+    # via -r backend/requirements-jobs.in
 uritemplate==4.1.1
     # via google-api-python-client
 urllib3==1.26.12
@@ -178,6 +188,5 @@ werkzeug==2.0.3
     # via flask
 wheel==0.45.0
     # via -r backend/requirements-jobs.in
-
-# The following packages are considered to be unsafe in a requirements file:
-# setuptools
+appengine-python-standard==1.0.0
+    # via -r backend/requirements-jobs.in
