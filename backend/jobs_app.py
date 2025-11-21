@@ -19,7 +19,7 @@ import types
 import os
 
 # Consolidated Flask imports
-from flask import Flask, request, jsonify 
+from flask import Flask, request, jsonify, json
 
 # Local application imports
 from common import auth_filter
