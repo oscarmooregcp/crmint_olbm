@@ -8,13 +8,14 @@
 .venv_controller
 .venv_jobs
 __pycache__
+#controller # Removed to allow controller package to be deployed
 controller_app.py
 controller_app.yaml
 controller_app_with_env_vars.yaml
 jobs_app.yaml
 cron.yaml
 setup_pubsub.py
-data
+#data # Removed to allow data/app.json to be deployed for controller.app_data
 flask_tasks.py
 frontend
 migrations
