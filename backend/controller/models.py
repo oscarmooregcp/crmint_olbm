@@ -756,7 +756,6 @@ class Job(extensions.db.Model):
         pipeline_id=self.pipeline_id,
         job_id=self.id)
    
-      return 0
 
     # Deletes matched tasks
     for task_inst in found_tasks:
