@@ -8,7 +8,6 @@
 .venv_controller
 .venv_jobs
 __pycache__
-controller
 controller_app.py
 controller_app.yaml
 controller_app_with_env_vars.yaml
