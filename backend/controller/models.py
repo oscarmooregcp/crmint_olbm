@@ -243,7 +243,7 @@ class Pipeline(extensions.db.Model):
       pipeline_id=self.id,
       job_id=0
     )
-    
+
     ready_status = self.get_ready()
     if ready_status == PipelineReadyStatus.READY:
       self._start()
@@ -765,34 +765,9 @@ class Job(extensions.db.Model):
         worker_class=self.worker_class,
         pipeline_id=self.pipeline_id,
         job_id=self.id)
-      # Clear the enqueued tasks queue for this namespace
-      TaskEnqueued.delete_tasks_like_namespace(self.pipeline_id)
-      # Set the job to idle
-      self.set_status(Job.STATUS.IDLE)
-      crmint_logging.log_message(
-        f'Job {self.id} has been set to IDLE.',
-        log_level='INFO',
-        worker_class=self.worker_class,
-        pipeline_id=self.pipeline_id,
-        job_id=self.id)
-      # Set all jobs in the pipeline to idle
-      for job in self.pipeline.jobs:
-        job.set_status(Job.STATUS.IDLE)
-        crmint_logging.log_message(
-          f'Job {job.id} in pipeline has been set to IDLE.',
-          log_level='INFO',
-          worker_class=self.worker_class,
-          pipeline_id=self.pipeline_id,
-          job_id=job.id)
-      # Set the pipeline to idle
-      self.pipeline.set_status(Pipeline.STATUS.IDLE)
-      crmint_logging.log_message(
-        f'Pipeline {self.pipeline_id} has been set to IDLE.',
-        log_level='INFO',
-        worker_class=self.worker_class,
-        pipeline_id=self.pipeline_id,
-        job_id=self.id)
-      return 0
+
+
+      return self._enqueued_task_count()
 
     # Deletes matched tasks
     for task_inst in found_tasks:
